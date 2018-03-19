@@ -24,21 +24,26 @@ class WebAuthenticationApi(WebDriveApi):
         """
         error = None
         try:
-            username = str(username)
+            username = unicode(username)
             token = str(token)
             local_folder = self._callback_params['local_folder']
             server_url = self._callback_params['server_url']
             engine_name = self._callback_params['engine_name']
             engine_type = self._callback_params['engine_type']
             server_url = server_url + '#' + engine_type
-            log.debug('Creating new account [%s, %s, %s]', local_folder, server_url, username)
-            error = self._settings_api.bind_server(local_folder, server_url, username, password=None, token=token, name=engine_name)
+            log.debug('Creating new account [%s, %s, %s]',
+                      local_folder, server_url, username)
+            error = self._settings_api.bind_server(
+                local_folder, server_url, username,
+                password=None, token=token, name=engine_name)
             log.debug("RETURN FROM BIND_SERVER IS: '%s'", error)
-            if error == "":
+            if error == '':
                 error = None
                 self._settings_api.set_new_local_folder(local_folder)
         except:
-            log.exception('Unexpected error while trying to create a new account [%s, %s, %s]',
+            log.exception('This should give info')
+            log.exception('Unexpected error while trying to create '
+                          'a new account [%s, %s, %s]',
                           local_folder, server_url, username)
             error = 'CONNECTION_UNKNOWN'
         finally:
@@ -54,7 +59,8 @@ class WebAuthenticationApi(WebDriveApi):
         try:
             token = str(token)
             log.debug('Updating token for account [%s, %s, %s]',
-                      engine.local_folder, engine.server_url, engine.remote_user)
+                      engine.local_folder, engine.server_url,
+                      engine.remote_user)
             self._settings_api.update_token(engine, token)
         except urllib2.URLError as e:
             log.exception('HTTP Error')
@@ -63,8 +69,9 @@ class WebAuthenticationApi(WebDriveApi):
             else:
                 error = 'CONNECTION_ERROR'
         except:
-            log.exception('Unexpected error while trying to update token for account [%s, %s, %s]',
-                          engine.local_folder, engine.server_url, engine.remote_user)
+            log.exception('Unexpected error while trying to update token '
+                          'for account [%s, %s, %s]', engine.local_folder,
+                          engine.server_url, engine.remote_user)
             error = 'CONNECTION_UNKNOWN'
         finally:
             self.dialog.accept()

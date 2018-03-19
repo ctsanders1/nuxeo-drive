@@ -186,7 +186,7 @@ class BaseAutomationClient(BaseClient):
 
         self.repository = repository
 
-        self.user_id = user_id
+        self.user_id = force_decode(user_id)
         self.device_id = device_id
         self.client_version = client_version
         self._update_auth(password=password, token=token)
@@ -674,8 +674,11 @@ class BaseAutomationClient(BaseClient):
         if token is not None:
             self.auth = ('X-Authentication-Token', token)
         elif password is not None:
-            basic_auth = 'Basic %s' % base64.b64encode(
-                    self.user_id + ":" + password).strip()
+            username = str(self.user_id)
+            password = str(password)
+
+            basic_auth = 'Basic {}'.format(
+                base64.b64encode(b':'.join((username, password))).strip())
             self.auth = ("Authorization", basic_auth)
         else:
             raise ValueError("Either password or token must be provided")
@@ -692,7 +695,6 @@ class BaseAutomationClient(BaseClient):
         browser vs devices).
         """
         return {
-            'X-User-Id': self.user_id,
             'X-Device-Id': self.device_id,
             'X-Client-Version': self.client_version,
             'User-Agent': self.application_name + '/' + self.client_version,

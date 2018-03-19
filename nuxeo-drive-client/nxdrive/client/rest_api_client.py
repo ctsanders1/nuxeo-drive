@@ -100,7 +100,6 @@ class RestAPIClient(object):
 
         """
         return {
-            'X-User-Id': self.user_id,
             'X-Device-Id': self.device_id,
             'X-Client-Version': self.client_version,
             'User-Agent': self.application_name + "/" + self.client_version,
