@@ -541,12 +541,12 @@ class Manager(QtCore.QObject):
                 """
                 log.error('Access denied to the API SHGetFolderPath,'
                           ' falling back on manual detection')
-                folder = os.path.expanduser(r'~\Documents')
+                folder = os.path.join(Options.user_home, 'Documents')
                 folder = unicode(folder.decode(ENCODING))
 
         if not folder:
             # Fall back on home folder otherwise
-            folder = os.path.expanduser('~')
+            folder = Options.user_home
             folder = unicode(folder.decode(ENCODING))
 
         folder = self._increment_local_folder(folder, self.app_name)

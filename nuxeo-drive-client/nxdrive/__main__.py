@@ -4,6 +4,7 @@ import sys
 
 
 from nxdrive.commandline import CliHandler
+from nxdrive.options import Options
 
 
 def dumpstacks(*args, **kwargs):
@@ -64,6 +65,15 @@ def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     if sys.platform != 'win32':
         signal.signal(signal.SIGUSR1, dumpstacks)
+    import os
+    if sys.platform == 'win32' and '?' in os.path.expanduser('~'):
+        from win32com.shell import shellcon, shell
+        Options.set('user_home', shell.SHGetFolderPath(
+            0, shellcon.CSIDL_PROFILE, 0, 0), setter='local')
+    else:
+        Options.set('user_home', os.path.expanduser('~'), setter='local')
+    Options.set('nxdrive_home', os.path.join(Options.user_home,
+                '.nuxeo-drive'), setter='local')
 
     argv = win32_unicode_argv() if sys.platform == 'win32' else sys.argv
     return CliHandler().handle(argv)

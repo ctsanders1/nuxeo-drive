@@ -9,6 +9,7 @@ import win32file
 from win32com.client import Dispatch
 from win32con import LOGPIXELSX
 
+from nxdrive.options import Options
 from .. import AbstractOSIntegration
 
 log = getLogger(__name__)
@@ -84,6 +85,6 @@ class WindowsIntegration(AbstractOSIntegration):
 
     def _get_folder_link(self, name=None):
         return os.path.join(
-            os.path.expanduser('~'),
+            Options.user_home,
             'Links',
             (name or self._manager.app_name) + '.lnk')

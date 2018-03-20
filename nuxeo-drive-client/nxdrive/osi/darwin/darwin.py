@@ -4,6 +4,7 @@ import sys
 import urllib2
 from logging import getLogger
 
+from nxdrive.options import Options
 from .. import AbstractOSIntegration
 from ...constants import BUNDLE_IDENTIFIER
 from ...utils import normalized_path
@@ -36,18 +37,16 @@ class DarwinIntegration(AbstractOSIntegration):
             BUNDLE_IDENTIFIER))
 
     def _get_agent_file(self):
-        return os.path.join(
-            os.path.expanduser('~/Library/LaunchAgents'),
-            '{}.plist'.format(BUNDLE_IDENTIFIER))
+        return os.path.join(Options.user_home, '/Library/LaunchAgents',
+                            '{}.plist'.format(BUNDLE_IDENTIFIER))
 
     def register_startup(self):
         """
         Register the Nuxeo Drive.app as a user Launch Agent.
         http://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html
         """
-        agent = os.path.join(
-            os.path.expanduser('~/Library/LaunchAgents'),
-            '{}.plist'.format(BUNDLE_IDENTIFIER))
+        agent = os.path.join(Options.user_home, '/Library/LaunchAgents',
+                             '{}.plist'.format(BUNDLE_IDENTIFIER))
         if os.path.isfile(agent):
             return
 

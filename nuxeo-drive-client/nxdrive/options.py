@@ -144,12 +144,7 @@ class MetaOptions(type):
         'log_level_file': ('DEBUG', 'default'),
         'max_errors': (3, 'default'),
         'max_sync_step': (10, 'default'),
-        'nxdrive_home': (
-            os.path.join(
-                unicode(os.path.expanduser('~').decode(
-                    locale.getpreferredencoding() or 'utf-8')),
-                '.nuxeo-drive'),
-            'default'),
+        'nxdrive_home': (None, 'default'),
         'nofscheck': (False, 'default'),
         'protocol_url': (None, 'default'),
         'proxy_exceptions': (None, 'default'),
@@ -168,6 +163,7 @@ class MetaOptions(type):
         'update_check_delay': (3600, 'default'),
         'update_site_url': (
             'http://community.nuxeo.com/static/drive-updates', 'default'),
+        'user_home': (None, 'default')
     }  # type: Dict[unicode, Tuple[Any, unicode]]
 
     default_options = deepcopy(options)
