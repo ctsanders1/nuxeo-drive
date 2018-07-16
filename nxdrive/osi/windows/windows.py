@@ -4,21 +4,59 @@ import sys
 from contextlib import suppress
 from ctypes import windll
 from logging import getLogger
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import win32api
 import win32file
+import winerror
 import winreg
 from win32com.client import Dispatch
+from win32com.shell import shell, shellcon
 from win32con import LOGPIXELSX
 
 from .. import AbstractOSIntegration
 from ...constants import APP_NAME
 from ...options import Options
+from ...utils import find_icon
 
 __all__ = ("WindowsIntegration",)
 
 log = getLogger(__name__)
+
+
+class IconOverlay:
+
+    # This UID must be the same as in tools/windows/setup-addons.iss
+    _reg_clsid_ = "{6AB83667-881F-40CD-9BB2-9413575DB414}"
+    _reg_progid_ = "NuxeoDrive.PythonOverlayHandler"
+    _reg_desc_ = "Icon Overlay Handler for Nuxeo Drive"
+    _public_methods_ = ["GetOverlayInfo", "GetPriority", "IsMemberOf"]
+    _com_interfaces_ = [shell.IID_IShellIconOverlayIdentifier]
+
+    def __init__(self) -> None:
+        log.debug("Starting")
+        self.icons = {
+            "modified": find_icon("overlay\\win32\\ModifiedIcon.ico"),
+            "normal": find_icon("overlay\\win32\\NormalIcon.ico"),
+        }
+
+    def GetOverlayInfo(self) -> Tuple[str, int, int]:
+        log.debug("Return Normal icon")
+        return self.icons["normal"], 0, shellcon.ISIOI_ICONFILE
+
+    def GetPriority(self) -> int:
+        log.debug("Return priority 50")
+        return 50
+
+    def IsMemberOf(self, fname: str, attributes) -> bool:
+        log.debug("calling isMember on %r with attrs = %r", fname, attributes)
+        if "nuxeo" in fname:
+            if "finan" in fname:
+                return winerror.S_FALSE
+
+            log.debug("return ok for synced")
+            return winerror.S_OK
+        return winerror.S_FALSE
 
 
 class WindowsIntegration(AbstractOSIntegration):
@@ -43,61 +81,97 @@ class WindowsIntegration(AbstractOSIntegration):
 
     @staticmethod
     def is_partition_supported(folder: str) -> bool:
-        if folder[-1] != os.path.sep:
-            folder = folder + os.path.sep
+        if not folder.endswith("\\"):
+            folder += "\\"
         if win32file.GetDriveType(folder) != win32file.DRIVE_FIXED:
             return False
         volume = win32file.GetVolumePathName(folder)
-        t = win32api.GetVolumeInformation(volume)
-        return t[-1] == "NTFS"
+        volume_info = win32api.GetVolumeInformation(volume)
+        return volume_info[4] == "NTFS"
 
     def get_system_configuration(self) -> Dict[str, Any]:
-        result = dict()
-        reg = winreg.HKEY_CURRENT_USER
-        reg_key = "Software\\Nuxeo\\Drive"
-        with suppress(WindowsError):
-            with winreg.OpenKey(reg, reg_key, 0, winreg.KEY_READ) as key:
-                for i in range(winreg.QueryInfoKey(key)[1]):
-                    k, v, _ = winreg.EnumValue(key, i)
-                    result[k.replace("-", "_").lower()] = v
+        """Retrieve the configuration stored in the registry, if any."""
+        result = {}
+        key = winreg.HKEY_CURRENT_USER
+        subkey = "Software\\Nuxeo\\Drive"
+        with suppress(OSError), winreg.OpenKey(key, subkey) as k:
+            for idx in range(winreg.QueryInfoKey(k)[1]):
+                name, value, _ = winreg.EnumValue(k, idx)
+                result[name.replace("-", "_").lower()] = value
         return result
 
     def register_folder_link(self, folder_path: str, name: str = None) -> None:
+        if not Options.is_frozen:
+            return
+
         favorite = self._get_folder_link(name)
         if not os.path.isfile(favorite):
             self._create_shortcut(favorite, folder_path)
 
     def unregister_folder_link(self, name: str = None) -> None:
+        if not Options.is_frozen:
+            return
+
         with suppress(OSError):
             os.remove(self._get_folder_link(name))
 
     def register_startup(self) -> bool:
         if not Options.is_frozen:
             return False
-        reg = winreg.HKEY_CURRENT_USER
-        reg_key = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 
-        try:
-            with winreg.CreateKey(reg, reg_key) as key:
-                winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, sys.executable)
-            return True
-        except WindowsError:
-            log.exception("Error while trying to modify registry.")
-            return False
+        return self._registry_add(
+            key=winreg.HKEY_CURRENT_USER,
+            subkey="Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+            name=APP_NAME,
+            value=sys.executable,
+        )
 
     def unregister_startup(self) -> bool:
         if not Options.is_frozen:
             return False
-        reg = winreg.HKEY_CURRENT_USER
-        reg_key = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 
+        return self._registry_del(
+            key=winreg.HKEY_CURRENT_USER,
+            subkey="Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+            name=APP_NAME,
+        )
+
+    def addons_installed(self) -> bool:
+        """Check if add-ons are installed or not."""
+        return False
+
+    def install_addons(self) -> bool:
+        """Register the application in the "icon overlay" softwares list."""
+        return False
+
+    def _registry_add(
+        self,
+        key: str,
+        subkey: str,
+        name: str,
+        value: str = None,
+        cat: str = winreg.REG_SZ,
+    ) -> bool:
+        """Add one key into the registry."""
         try:
-            with winreg.OpenKey(reg, reg_key, 0, winreg.KEY_SET_VALUE) as key:
-                winreg.DeleteValue(key, APP_NAME)
-            return True
-        except WindowsError:
-            log.exception("Error while trying to modify registry.")
+            with winreg.CreateKey(key, subkey) as k:
+                winreg.SetValueEx(k, name, 0, cat, value)
+        except OSError:
+            log.exception(f"Registry: cannot add {key}\\{subkey}\\{name}")
             return False
+        else:
+            return True
+
+    def _registry_del(self, key: str, subkey: str, name: str) -> bool:
+        """Delete one key from the registry."""
+        try:
+            with winreg.OpenKey(key, subkey, 0, winreg.KEY_SET_VALUE) as k:
+                winreg.DeleteValue(k, name)
+        except OSError:
+            log.exception(f"Registry: cannot delete {key}\\{subkey}\\{name}")
+            return False
+        else:
+            return True
 
     def _create_shortcut(self, favorite: str, filepath: str) -> None:
         try:

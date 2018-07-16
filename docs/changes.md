@@ -43,6 +43,7 @@ Changes in command line arguments:
 - [NXDRIVE-1314](https://jira.nuxeo.com/browse/NXDRIVE-1314): Add a placeholder text in server URL
 
 ### Packaging / Build
+- [NXDRIVE-1156](https://jira.nuxeo.com/browse/NXDRIVE-1156): Use file system decoration on Windows
 - [NXDRIVE-1217](https://jira.nuxeo.com/browse/NXDRIVE-1217): Hide the Dock icon on macOS
 - [NXDRIVE-1223](https://jira.nuxeo.com/browse/NXDRIVE-1223): Use a fork of universal-analytics-python that supports Python 3
 - [NXDRIVE-1225](https://jira.nuxeo.com/browse/NXDRIVE-1225): Be specific about pyobjc requirements

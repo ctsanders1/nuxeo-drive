@@ -93,6 +93,16 @@ Rectangle {
             onClicked: manager.set_beta_channel(checked)
             Layout.leftMargin: -5
         }
+
+        NuxeoSwitch {
+            text: qsTr("INSTALL_ADDONS") + tl.tr
+            enabled: isFrozen
+            checked: manager.osi.addons_installed()
+            visible: WINDOWS
+            onClicked: manager.osi.install_addons()
+            Layout.leftMargin: -5
+        }
+
         Link {
             id: proxyPopupLink
             text: qsTr("PROXY_CHANGE_SETTINGS") + tl.tr
