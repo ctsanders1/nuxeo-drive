@@ -24,6 +24,20 @@ $global:PIP_OPT = "-m", "pip", "install", "--upgrade", "--upgrade-strategy=only-
 # Imports
 Import-Module BitsTransfer
 
+function build_addons {
+	# Build the add-ons installer
+	Write-Output ">>> Building the add-ons installer"
+	if (-Not (Test-Path "$Env:ISCC_PATH")) {
+		Write-Output ">>> ISCC does not exist: $Env:ISCC_PATH. Aborting."
+		ExitWithCode 1
+	}
+	& $Env:ISCC_PATH\iscc "tools\windows\setup-addons.iss"
+	if ($lastExitCode -ne 0) {
+		ExitWithCode $lastExitCode
+	}
+	sign "dist\nuxeo-drive-addons.exe"
+}
+
 function build_installer {
 	# Build the installer
 	$app_version = (Get-Content nxdrive/__init__.py) -match "__version__" -replace '"', "" -replace "__version__ = ", ""
@@ -261,6 +275,7 @@ function main {
 	}
 
 	if ($build) {
+		build_addons
 		build_installer
 	} elseif ($start) {
 		start_nxdrive
