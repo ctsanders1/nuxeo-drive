@@ -371,21 +371,10 @@ def normalize_event_filename(filename: str, action: bool = True) -> str:
 
     if WINDOWS:
         """
-        If `filename` exists, and as Windows is case insensitive,
-        the result of Get(Full|Long|Short)PathName() could be unexpected
-        because it will return the path of the existant `filename`.
-
-        Check this simplified code session (the file "ABC.txt" exists):
-
-            >>> win32api.GetLongPathName('abc.txt')
-            'ABC.txt'
-            >>> win32api.GetLongPathName('ABC.TXT')
-            'ABC.txt'
-            >>> win32api.GetLongPathName('ABC.txt')
-            'ABC.txt'
-
-        So, to counter that behavior, we save the actual file name
-        and restore it in the full path.
+        If some folders in the path have a very long name, the input filename
+        will probably contain shortened names like "FOLDER~1".
+        To ensure that all path comparisons behave correctly, we use
+        GetLongPathNameW(filename) so that they are expanded again.
         """
         import win32api
 
