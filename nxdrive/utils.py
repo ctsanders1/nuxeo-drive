@@ -361,9 +361,15 @@ def normalize_event_filename(filename: str, action: bool = True) -> str:
     # NXDRIVE-188: Normalize name on the file system, if needed
     normalized = unicodedata.normalize("NFC", str(filename))
 
-    if MAC:
+    if MAC or not os.path.exists(filename):
         return normalized
-    elif WINDOWS and os.path.exists(filename):
+
+    if action and filename != normalized:
+        log.debug("Forcing normalization: %r -> %r", filename, normalized)
+        os.rename(filename, normalized)
+        filename = normalized
+
+    if WINDOWS:
         """
         If `filename` exists, and as Windows is case insensitive,
         the result of Get(Full|Long|Short)PathName() could be unexpected
@@ -383,14 +389,9 @@ def normalize_event_filename(filename: str, action: bool = True) -> str:
         """
         import win32api
 
-        long_path = win32api.GetLongPathNameW(filename)
-        filename = os.path.join(os.path.dirname(long_path), os.path.basename(filename))
+        filename = win32api.GetLongPathNameW(filename)
 
-    if action and filename != normalized and os.path.exists(filename):
-        log.debug("Forcing normalization: %r -> %r", filename, normalized)
-        os.rename(filename, normalized)
-
-    return normalized
+    return filename
 
 
 def safe_filename(
